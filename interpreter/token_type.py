@@ -18,6 +18,8 @@ class TokenType(Enum):
     SLASH = "/"
     LT = "<"
     GT = ">"
+    EQ = "=="
+    NOT_EQ = "!="
 
     # Delimiters
     COMMA = ","
@@ -30,6 +32,11 @@ class TokenType(Enum):
     # Keywords
     FUNCTION = "FUNCTION"
     LET = "LET"
+    TRUE = "TRUE"
+    FALSE = "FALSE"
+    IF = "IF"
+    ELSE = "ELSE"
+    RETURN = "RETURN"
 
     def __repr__(self) -> str:
         return self._name_
@@ -38,6 +45,11 @@ class TokenType(Enum):
 KEYWORDS = {
     "fn": TokenType.FUNCTION,
     "let": TokenType.LET,
+    "true": TokenType.TRUE,
+    "false": TokenType.FALSE,
+    "if": TokenType.IF,
+    "else": TokenType.ELSE,
+    "return": TokenType.RETURN,
 }
 
 

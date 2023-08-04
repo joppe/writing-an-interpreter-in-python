@@ -19,13 +19,23 @@ class Lexer:
 
         match self.char:
             case "=":
-                token = Token(TokenType.ASSIGN, self.char)
+                if self.peek_char() == "=":
+                    self._read_char()
+
+                    token = Token(TokenType.EQ, "==")
+                else:
+                    token = Token(TokenType.ASSIGN, self.char)
             case "+":
                 token = Token(TokenType.PLUS, self.char)
             case "-":
                 token = Token(TokenType.MINUS, self.char)
             case "!":
-                token = Token(TokenType.BANG, self.char)
+                if self.peek_char() == "=":
+                    self._read_char()
+
+                    token = Token(TokenType.NOT_EQ, "!=")
+                else:
+                    token = Token(TokenType.BANG, self.char)
             case "/":
                 token = Token(TokenType.SLASH, self.char)
             case "*":
@@ -66,6 +76,12 @@ class Lexer:
         self._read_char()
 
         return token
+
+    def peek_char(self) -> str:
+        if self.read_position >= len(self.input):
+            return EMPTY_CHAR
+
+        return self.input[self.read_position]
 
     def _read_identifier(self) -> str:
         position = self.position
