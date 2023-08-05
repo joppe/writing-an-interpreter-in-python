@@ -117,3 +117,13 @@ class Lexer:
     def _skip_whitespace(self):
         while self.char in WHITESPACE:
             self._read_char()
+
+    def __iter__(self):
+        token = self.next_token()
+
+        while token.token_type != TokenType.EOF:
+            yield token
+
+            token = self.next_token()
+
+        yield token
