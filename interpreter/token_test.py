@@ -5,7 +5,7 @@ from interpreter.token import Token
 
 
 class TestToken(unittest.TestCase):
-    def test_to_string(self):
+    def test_to_string(self) -> None:
         token = Token(TokenType.LBRACE, "{")
 
         self.assertEqual(str(token), "Token(TokenType.LBRACE, {)")
