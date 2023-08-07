@@ -5,7 +5,7 @@ from interpreter.token_type import TokenType
 
 
 class TestLexer(unittest.TestCase):
-    def test_next_token(self):
+    def test_next_token(self) -> None:
         input = """
             let five = 5;
             let ten = 10;
