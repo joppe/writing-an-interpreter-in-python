@@ -2,7 +2,7 @@ from interpreter.token_type import TokenType
 
 
 class Token:
-    def __init__(self, token_type: TokenType, literal: str):
+    def __init__(self, token_type: TokenType, literal: str) -> None:
         self.token_type = token_type
         self.literal = literal
 
