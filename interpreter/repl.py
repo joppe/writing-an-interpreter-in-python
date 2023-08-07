@@ -4,7 +4,7 @@ from interpreter.lexer import Lexer
 PROMPT = ">>> "
 
 
-def repl():
+def repl() -> None:
     while True:
         try:
             text = input(PROMPT)
