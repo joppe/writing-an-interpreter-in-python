@@ -1,12 +1,19 @@
 from typing import Optional
-from interpreter.ast import Expression, Identifier, LetStatement, Program, Statement
+from interpreter.ast import (
+    Expression,
+    Identifier,
+    LetStatement,
+    Program,
+    ReturnStatement,
+    Statement,
+)
 from interpreter.lexer import Lexer
 from interpreter.token import Token
 from interpreter.token_type import TokenType
 
 
 class Parser:
-    def __init__(self, lexer: Lexer):
+    def __init__(self, lexer: Lexer) -> None:
         self._lexer = lexer
         self._errors: list[str] = []
         self._current_token: Token = Token(TokenType.ILLEGAL, "")
@@ -16,17 +23,17 @@ class Parser:
         self._next_token()
 
     def parse_program(self) -> Program:
-        program = Program()
+        statements: list[Statement] = []
 
         while not self._current_token_is(TokenType.EOF):
             statement = self._parse_statement()
 
             if statement is not None:
-                program.statements.append(statement)
+                statements.append(statement)
 
             self._next_token()
 
-        return program
+        return Program(statements)
 
     def errors(self) -> list[str]:
         return self._errors
@@ -45,8 +52,20 @@ class Parser:
         match self._current_token.token_type:
             case TokenType.LET:
                 return self._parse_let_statement()
+            case TokenType.RETURN:
+                return self._parse_return_statment()
             case _:
                 return None
+
+    def _parse_return_statment(self) -> Optional[Statement]:
+        token = self._current_token
+
+        while not self._current_token_is(TokenType.SEMICOLON):
+            self._next_token()
+
+        statement = ReturnStatement(token, Expression(token))
+
+        return statement
 
     def _parse_let_statement(self) -> Optional[LetStatement]:
         token = self._current_token

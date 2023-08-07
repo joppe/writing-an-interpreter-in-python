@@ -1,11 +1,32 @@
 import unittest
-from interpreter.ast import LetStatement
+from interpreter.ast import LetStatement, ReturnStatement
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 
 
 class TestParser(unittest.TestCase):
-    def test_let_statements(self):
+    def test_return_statements(self) -> None:
+        input = """
+            return 5;
+            return 10;
+            return 993322;
+        """
+        lexer = Lexer(input)
+        parser = Parser(lexer)
+        program = parser.parse_program()
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 3)
+
+        tests = ["5", "10", "993322"]
+
+        for i, _ in enumerate(tests):
+            stmt = program.statements[i]
+
+            self.assertEqual(stmt.token_literal(), "return")
+            self.assertIsInstance(stmt, ReturnStatement)
+
+    def test_let_statements(self) -> None:
         input = """
             let x = 5;
             let y = 10;

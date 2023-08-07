@@ -10,24 +10,33 @@ class Node(ABC):
 
 
 class Statement(Node):
-    def __init__(self, token: Token):
+    def __init__(self, token: Token) -> None:
         self.token = token
+
+    def __repr__(self) -> str:
+        return self.token.literal
 
     def token_literal(self) -> str:
         return self.token.literal
 
 
 class Expression(Node):
-    def __init__(self, token: Token):
+    def __init__(self, token: Token) -> None:
         self.token = token
+
+    def __repr__(self) -> str:
+        return self.token.literal
 
     def token_literal(self) -> str:
         return self.token.literal
 
 
 class Program(Node):
-    def __init__(self, statements: list[Statement] = []):
+    def __init__(self, statements: list[Statement] = []) -> None:
         self.statements = statements
+
+    def __repr__(self) -> str:
+        return "".join([str(statement) for statement in self.statements])
 
     def token_literal(self) -> str:
         if len(self.statements) > 0:
@@ -49,3 +58,10 @@ class LetStatement(Statement):
 
         self.name = name
         self.expression = expression
+
+
+class ReturnStatement(Statement):
+    def __init__(self, token: Token, return_value: Expression) -> None:
+        super().__init__(token)
+
+        self.return_value = return_value
