@@ -7,55 +7,55 @@ WHITESPACE = {" ", "\t", "\n", "\r"}
 
 class Lexer:
     def __init__(self, input: str):
-        self.input = input
-        self.position = 0
-        self.read_position = 0
-        self.char = EMPTY_CHAR
+        self._input = input
+        self._position = 0
+        self._read_position = 0
+        self._char = EMPTY_CHAR
 
         self._read_char()
 
     def next_token(self) -> Token:
         self._skip_whitespace()
 
-        match self.char:
+        match self._char:
             case "=":
                 if self.peek_char() == "=":
                     self._read_char()
 
                     token = Token(TokenType.EQ, "==")
                 else:
-                    token = Token(TokenType.ASSIGN, self.char)
+                    token = Token(TokenType.ASSIGN, self._char)
             case "+":
-                token = Token(TokenType.PLUS, self.char)
+                token = Token(TokenType.PLUS, self._char)
             case "-":
-                token = Token(TokenType.MINUS, self.char)
+                token = Token(TokenType.MINUS, self._char)
             case "!":
                 if self.peek_char() == "=":
                     self._read_char()
 
                     token = Token(TokenType.NOT_EQ, "!=")
                 else:
-                    token = Token(TokenType.BANG, self.char)
+                    token = Token(TokenType.BANG, self._char)
             case "/":
-                token = Token(TokenType.SLASH, self.char)
+                token = Token(TokenType.SLASH, self._char)
             case "*":
-                token = Token(TokenType.ASTERISK, self.char)
+                token = Token(TokenType.ASTERISK, self._char)
             case "<":
-                token = Token(TokenType.LT, self.char)
+                token = Token(TokenType.LT, self._char)
             case ">":
-                token = Token(TokenType.GT, self.char)
+                token = Token(TokenType.GT, self._char)
             case ";":
-                token = Token(TokenType.SEMICOLON, self.char)
+                token = Token(TokenType.SEMICOLON, self._char)
             case "(":
-                token = Token(TokenType.LPAREN, self.char)
+                token = Token(TokenType.LPAREN, self._char)
             case ")":
-                token = Token(TokenType.RPAREN, self.char)
+                token = Token(TokenType.RPAREN, self._char)
             case ",":
-                token = Token(TokenType.COMMA, self.char)
+                token = Token(TokenType.COMMA, self._char)
             case "{":
-                token = Token(TokenType.LBRACE, self.char)
+                token = Token(TokenType.LBRACE, self._char)
             case "}":
-                token = Token(TokenType.RBRACE, self.char)
+                token = Token(TokenType.RBRACE, self._char)
             case "\u0000":
                 token = Token(TokenType.EOF, "")
             case _:
@@ -71,51 +71,51 @@ class Lexer:
 
                     return token
                 else:
-                    token = Token(TokenType.ILLEGAL, self.char)
+                    token = Token(TokenType.ILLEGAL, self._char)
 
         self._read_char()
 
         return token
 
     def peek_char(self) -> str:
-        if self.read_position >= len(self.input):
+        if self._read_position >= len(self._input):
             return EMPTY_CHAR
 
-        return self.input[self.read_position]
+        return self._input[self._read_position]
 
     def _read_identifier(self) -> str:
-        position = self.position
+        position = self._position
 
         while self._is_letter():
             self._read_char()
 
-        return self.input[position : self.position]
+        return self._input[position : self._position]
 
     def _read_number(self) -> str:
-        position = self.position
+        position = self._position
 
         while self._is_digit():
             self._read_char()
 
-        return self.input[position : self.position]
+        return self._input[position : self._position]
 
     def _read_char(self):
-        if self.read_position >= len(self.input):
-            self.char = EMPTY_CHAR
+        if self._read_position >= len(self._input):
+            self._char = EMPTY_CHAR
         else:
-            self.char = self.input[self.read_position]
+            self._char = self._input[self._read_position]
 
-        self.position = self.read_position
-        self.read_position += 1
+        self._position = self._read_position
+        self._read_position += 1
 
     def _is_letter(self) -> bool:
-        return self.char.isalpha() or self.char == "_"
+        return self._char.isalpha() or self._char == "_"
 
     def _is_digit(self) -> bool:
-        return self.char.isdigit()
+        return self._char.isdigit()
 
     def _skip_whitespace(self):
-        while self.char in WHITESPACE:
+        while self._char in WHITESPACE:
             self._read_char()
 
     def __iter__(self):
