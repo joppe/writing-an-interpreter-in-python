@@ -1,8 +1,11 @@
 from typing import Optional, Callable
 from interpreter.ast import (
+    BlockStatement,
+    Boolean,
     Expression,
     ExpressionStatement,
     Identifier,
+    IfExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -50,6 +53,10 @@ class Parser:
             TokenType.INT: self._parse_integer_literal,
             TokenType.BANG: self._parse_prefix_expression,
             TokenType.MINUS: self._parse_prefix_expression,
+            TokenType.TRUE: self._parse_boolean,
+            TokenType.FALSE: self._parse_boolean,
+            TokenType.LPAREN: self._parse_grouped_expression,
+            TokenType.IF: self._parse_if_expression,
         }
         self._infix_parse_fns: dict[TokenType, Callable] = {
             TokenType.PLUS: self._parse_infix_expression,
@@ -154,6 +161,70 @@ class Parser:
 
     def _parse_identifier(self) -> Identifier:
         return Identifier(self._current_token, self._current_token.literal)
+
+    def _parse_boolean(self) -> Boolean:
+        return Boolean(self._current_token, self._current_token_is(TokenType.TRUE))
+
+    def _parse_grouped_expression(self) -> Optional[Expression]:
+        self._next_token()
+
+        expression = self._parse_expression(Precedence.LOWEST)
+
+        if not self._expect_peek(TokenType.RPAREN):
+            return None
+
+        return expression
+
+    def _parse_if_expression(self) -> Optional[Expression]:
+        token = self._current_token
+
+        if not self._expect_peek(TokenType.LPAREN):
+            return None
+
+        self._next_token()
+
+        condition = self._parse_expression(Precedence.LOWEST)
+
+        if condition is None:
+            return None
+
+        if not self._expect_peek(TokenType.RPAREN):
+            return None
+
+        if not self._expect_peek(TokenType.LBRACE):
+            return None
+
+        consequence = self._parse_block_statement()
+
+        alternative = None
+
+        if self._peek_token_is(TokenType.ELSE):
+            self._next_token()
+
+            if not self._expect_peek(TokenType.LBRACE):
+                return None
+
+            alternative = self._parse_block_statement()
+
+        return IfExpression(token, condition, consequence, alternative)
+
+    def _parse_block_statement(self) -> BlockStatement:
+        token = self._current_token
+        statements: list[Statement] = []
+
+        self._next_token()
+
+        while not self._current_token_is(
+            TokenType.RBRACE
+        ) and not self._current_token_is(TokenType.EOF):
+            statement = self._parse_statement()
+
+            if statement is not None:
+                statements.append(statement)
+
+            self._next_token()
+
+        return BlockStatement(token, statements)
 
     def _parse_integer_literal(self) -> Optional[Expression]:
         token = self._current_token

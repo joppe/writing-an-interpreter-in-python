@@ -63,6 +63,16 @@ class Identifier(Expression):
         return self.value
 
 
+class Boolean(Expression):
+    def __init__(self, token: Token, value: bool) -> None:
+        super().__init__(token)
+
+        self.value = value
+
+    def __repr__(self) -> str:
+        return str(self.value).lower()
+
+
 class LetStatement(Statement):
     def __init__(self, token: Token, name: Identifier, expression: Expression) -> None:
         super().__init__(token)
@@ -92,6 +102,7 @@ class ReturnStatement(Statement):
 
         if self.return_value is not None:
             out += f"{self.return_value}"
+
         out += ";"
 
         return out
@@ -109,11 +120,29 @@ class ExpressionStatement(Statement):
         return ""
 
 
+class BlockStatement(Statement):
+    def __init__(self, token: Token, statements: list[Statement]) -> None:
+        super().__init__(token)
+
+        self.statements = statements or []
+
+    def __repr__(self) -> str:
+        out = ""
+
+        for statement in self.statements:
+            out += f"{statement}"
+
+        return out
+
+
 class IntegerLiteral(Expression):
     def __init__(self, token: Token, value: int) -> None:
         super().__init__(token)
 
         self.value = value
+
+    def __repr__(self) -> str:
+        return str(self.value)
 
 
 class PrefixExpression(Expression):
@@ -143,3 +172,26 @@ class InfixExpression(Expression):
 
     def __repr__(self) -> str:
         return f"({self.left} {self.operator} {self.right})"
+
+
+class IfExpression(Expression):
+    def __init__(
+        self,
+        token: Token,
+        condition: Expression,
+        consequence: BlockStatement,
+        alternative: BlockStatement | None = None,
+    ) -> None:
+        super().__init__(token)
+
+        self.condition = condition
+        self.consequence = consequence
+        self.alternative = alternative
+
+    def __repr__(self) -> str:
+        out = f"if {self.condition} {self.consequence}"
+
+        if self.alternative is not None:
+            out += f" else {self.alternative}"
+
+        return out

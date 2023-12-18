@@ -1,5 +1,9 @@
 import unittest
+from typing import Any
 from interpreter.ast import (
+    Boolean,
+    Expression,
+    IfExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -45,11 +49,25 @@ class TestParser(unittest.TestCase):
         self.assertIsInstance(stmt, ExpressionStatement)
 
         if isinstance(stmt, ExpressionStatement):
-            self.assertIsInstance(stmt.expression, Identifier)
+            self._test_identifier(stmt.expression, "foobar")
 
-            if isinstance(stmt.expression, Identifier):
-                self.assertEqual(stmt.expression.value, "foobar")
-                self.assertEqual(stmt.expression.token_literal(), "foobar")
+    def test_boolean_expression(self) -> None:
+        input = "true;"
+        program = self._setup_program(input)
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 1)
+
+        stmt = program.statements[0]
+
+        self.assertIsInstance(stmt, ExpressionStatement)
+
+        if isinstance(stmt, ExpressionStatement):
+            self.assertIsInstance(stmt.expression, Boolean)
+
+            if isinstance(stmt.expression, Boolean):
+                self.assertEqual(stmt.expression.value, True)
+                self.assertEqual(stmt.expression.token_literal(), "true")
 
     def test_integer_literal_expression(self) -> None:
         input = "5;"
@@ -63,11 +81,7 @@ class TestParser(unittest.TestCase):
         self.assertIsInstance(stmt, ExpressionStatement)
 
         if isinstance(stmt, ExpressionStatement):
-            self.assertIsInstance(stmt.expression, IntegerLiteral)
-
-            if isinstance(stmt.expression, IntegerLiteral):
-                self.assertEqual(stmt.expression.value, 5)
-                self.assertEqual(stmt.expression.token_literal(), "5")
+            self._test_integer_literal(stmt.expression, 5)
 
     def test_prefix_expressions(self) -> None:
         prefix_tests = [
@@ -90,13 +104,7 @@ class TestParser(unittest.TestCase):
 
                 if isinstance(stmt.expression, PrefixExpression):
                     self.assertEqual(stmt.expression.operator, tt[1])
-                    self.assertIsInstance(stmt.expression.right, IntegerLiteral)
-
-                    if isinstance(stmt.expression.right, IntegerLiteral):
-                        self.assertEqual(stmt.expression.right.value, tt[2])
-                        self.assertEqual(
-                            stmt.expression.right.token_literal(), str(tt[2])
-                        )
+                    self._test_integer_literal(stmt.expression.right, tt[2])
 
     def test_infix_expressions(self) -> None:
         infix_tests = [
@@ -108,6 +116,9 @@ class TestParser(unittest.TestCase):
             ("5 < 5;", 5, "<", 5),
             ("5 == 5;", 5, "==", 5),
             ("5 != 5;", 5, "!=", 5),
+            ("true == true", True, "==", True),
+            ("true != false", True, "!=", False),
+            ("false == false", False, "==", False),
         ]
 
         for tt in infix_tests:
@@ -121,26 +132,7 @@ class TestParser(unittest.TestCase):
             self.assertIsInstance(stmt, ExpressionStatement)
 
             if isinstance(stmt, ExpressionStatement):
-                self.assertIsInstance(stmt.expression, InfixExpression)
-
-                if isinstance(stmt.expression, InfixExpression):
-                    self.assertIsInstance(stmt.expression.left, IntegerLiteral)
-
-                    if isinstance(stmt.expression.left, IntegerLiteral):
-                        self.assertEqual(stmt.expression.left.value, tt[1])
-                        self.assertEqual(
-                            stmt.expression.left.token_literal(), str(tt[1])
-                        )
-
-                    self.assertEqual(stmt.expression.operator, tt[2])
-
-                    self.assertIsInstance(stmt.expression.right, IntegerLiteral)
-
-                    if isinstance(stmt.expression.right, IntegerLiteral):
-                        self.assertEqual(stmt.expression.right.value, tt[3])
-                        self.assertEqual(
-                            stmt.expression.right.token_literal(), str(tt[3])
-                        )
+                self._test_infix_expression(stmt.expression, tt[1], tt[2], tt[3])
 
     def test_operator_precedence_parsing(self) -> None:
         tests = [
@@ -156,6 +148,15 @@ class TestParser(unittest.TestCase):
             ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
             ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
             ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+            ("true", "true"),
+            ("false", "false"),
+            ("3 > 5 == false", "((3 > 5) == false)"),
+            ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
         ]
 
         for tt in tests:
@@ -163,6 +164,36 @@ class TestParser(unittest.TestCase):
 
             self.assertNotEqual(program, None)
             self.assertEqual(str(program), tt[1])
+
+    def test_if_expression(self) -> None:
+        input = "if (x < y) { x }"
+        program = self._setup_program(input)
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 1)
+
+        stmt = program.statements[0]
+
+        self.assertIsInstance(stmt, ExpressionStatement)
+
+        if isinstance(stmt, ExpressionStatement):
+            expression = stmt.expression
+
+            self.assertIsInstance(expression, IfExpression)
+
+            if isinstance(expression, IfExpression):
+                self._test_infix_expression(expression.condition, "x", "<", "y")
+
+                self.assertEqual(len(expression.consequence.statements), 1)
+
+                consequence = expression.consequence.statements[0]
+
+                self.assertIsInstance(consequence, ExpressionStatement)
+
+                if isinstance(consequence, ExpressionStatement):
+                    self._test_identifier(consequence.expression, "x")
+
+                self.assertEqual(expression.alternative, None)
 
     def test_let_statements(self) -> None:
         input = """
@@ -186,6 +217,48 @@ class TestParser(unittest.TestCase):
             if isinstance(stmt, LetStatement):
                 self.assertEqual(stmt.name.value, tt)
                 self.assertEqual(stmt.name.token_literal(), tt)
+
+    def _test_integer_literal(self, expression: Expression, value: int) -> None:
+        self.assertIsInstance(expression, IntegerLiteral)
+
+        if isinstance(expression, IntegerLiteral):
+            self.assertEqual(expression.value, value)
+            self.assertEqual(expression.token_literal(), str(value))
+
+    def _test_identifier(self, expression: Expression, value: str) -> None:
+        self.assertIsInstance(expression, Identifier)
+
+        if isinstance(expression, Identifier):
+            self.assertEqual(expression.value, value)
+            self.assertEqual(expression.token_literal(), value)
+
+    def _test_literal_expression(self, expression: Expression, expected: Any) -> None:
+        # First check for boolean, then integer because bool is a subclass of int
+        if isinstance(expected, bool):
+            self._test_boolean_literal(expression, expected)
+        elif isinstance(expected, int):
+            self._test_integer_literal(expression, expected)
+        elif isinstance(expected, str):
+            self._test_identifier(expression, expected)
+        else:
+            self.fail(f"type of expression not handled, got={type(expression)}")
+
+    def _test_boolean_literal(self, expression: Expression, value: bool) -> None:
+        self.assertIsInstance(expression, Boolean)
+
+        if isinstance(expression, Boolean):
+            self.assertEqual(expression.value, value)
+            self.assertEqual(expression.token_literal(), str(value).lower())
+
+    def _test_infix_expression(
+        self, expression: Expression, left: Any, operator: str, right: Any
+    ) -> None:
+        self.assertIsInstance(expression, InfixExpression)
+
+        if isinstance(expression, InfixExpression):
+            self._test_literal_expression(expression.left, left)
+            self.assertEqual(expression.operator, operator)
+            self._test_literal_expression(expression.right, right)
 
     def _setup_program(self, input: str) -> Program:
         lexer = Lexer(input)
