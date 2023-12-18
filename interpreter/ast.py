@@ -74,7 +74,9 @@ class Boolean(Expression):
 
 
 class LetStatement(Statement):
-    def __init__(self, token: Token, name: Identifier, expression: Expression) -> None:
+    def __init__(
+        self, token: Token, name: Identifier, expression: Expression | None
+    ) -> None:
         super().__init__(token)
 
         self.name = name
@@ -145,6 +147,30 @@ class IntegerLiteral(Expression):
         return str(self.value)
 
 
+class FunctionLiteral(Expression):
+    def __init__(
+        self, token: Token, parameters: list[Identifier], body: BlockStatement
+    ) -> None:
+        super().__init__(token)
+
+        self.parameters = parameters
+        self.body = body
+
+    def __repr__(self) -> str:
+        out = f"{self.token_literal()}("
+
+        params = []
+
+        for param in self.parameters:
+            params.append(f"{param}")
+
+        out += ", ".join(params)
+        out += ") "
+        out += f"{self.body}"
+
+        return out
+
+
 class PrefixExpression(Expression):
     def __init__(self, token: Token, operator: str, right: Expression) -> None:
         super().__init__(token)
@@ -193,5 +219,28 @@ class IfExpression(Expression):
 
         if self.alternative is not None:
             out += f" else {self.alternative}"
+
+        return out
+
+
+class CallExpression(Expression):
+    def __init__(
+        self, token: Token, function: Expression, arguments: list[Expression]
+    ) -> None:
+        super().__init__(token)
+
+        self.function = function
+        self.arguments = arguments
+
+    def __repr__(self) -> str:
+        out = f"{self.function}("
+
+        args = []
+
+        for arg in self.arguments:
+            args.append(f"{arg}")
+
+        out += ", ".join(args)
+        out += ")"
 
         return out

@@ -2,7 +2,9 @@ import unittest
 from typing import Any
 from interpreter.ast import (
     Boolean,
+    CallExpression,
     Expression,
+    FunctionLiteral,
     IfExpression,
     InfixExpression,
     IntegerLiteral,
@@ -157,6 +159,12 @@ class TestParser(unittest.TestCase):
             ("2 / (5 + 5)", "(2 / (5 + 5))"),
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
+            ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+            (
+                "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+                "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            ),
+            ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"),
         ]
 
         for tt in tests:
@@ -195,28 +203,112 @@ class TestParser(unittest.TestCase):
 
                 self.assertEqual(expression.alternative, None)
 
-    def test_let_statements(self) -> None:
-        input = """
-            let x = 5;
-            let y = 10;
-            let foobar = 838383;
-        """
+    def test_function_literal_parsing(self) -> None:
+        input = "fn(x, y) { x + y; }"
         program = self._setup_program(input)
 
         self.assertNotEqual(program, None)
-        self.assertEqual(len(program.statements), 3)
+        self.assertEqual(len(program.statements), 1)
 
-        tests = ["x", "y", "foobar"]
+        stmt = program.statements[0]
 
-        for i, tt in enumerate(tests):
-            stmt = program.statements[i]
+        self.assertIsInstance(stmt, ExpressionStatement)
 
-            self.assertEqual(stmt.token_literal(), "let")
+        if isinstance(stmt, ExpressionStatement):
+            function = stmt.expression
+
+            self.assertIsInstance(function, FunctionLiteral)
+
+            if isinstance(function, FunctionLiteral):
+                self.assertEqual(len(function.parameters), 2)
+
+                self._test_literal_expression(function.parameters[0], "x")
+                self._test_literal_expression(function.parameters[1], "y")
+
+                self.assertEqual(len(function.body.statements), 1)
+
+                body_stmt = function.body.statements[0]
+
+                self.assertIsInstance(body_stmt, ExpressionStatement)
+
+                if isinstance(body_stmt, ExpressionStatement):
+                    self._test_infix_expression(body_stmt.expression, "x", "+", "y")
+
+    def test_function_parameter_parsing(self) -> None:
+        tests: list[tuple[str, list[str]]] = [
+            ("fn() {};", []),
+            ("fn(x) {};", ["x"]),
+            ("fn(x, y, z) {};", ["x", "y", "z"]),
+        ]
+
+        for tt in tests:
+            program = self._setup_program(tt[0])
+
+            self.assertNotEqual(program, None)
+            self.assertEqual(len(program.statements), 1)
+
+            stmt = program.statements[0]
+
+            self.assertIsInstance(stmt, ExpressionStatement)
+
+            if isinstance(stmt, ExpressionStatement):
+                function = stmt.expression
+
+                self.assertIsInstance(function, FunctionLiteral)
+
+                if isinstance(function, FunctionLiteral):
+                    self.assertEqual(len(function.parameters), len(tt[1]))
+
+                    for i, param in enumerate(tt[1]):
+                        self._test_literal_expression(function.parameters[i], param)
+
+    def test_call_expression_parsing(self) -> None:
+        input = "add(1, 2 * 3, 4 + 5);"
+        program = self._setup_program(input)
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 1)
+
+        stmt = program.statements[0]
+
+        self.assertIsInstance(stmt, ExpressionStatement)
+
+        if isinstance(stmt, ExpressionStatement):
+            expression = stmt.expression
+
+            self.assertIsInstance(expression, CallExpression)
+
+            if isinstance(expression, CallExpression):
+                self._test_identifier(expression.function, "add")
+
+                self.assertEqual(len(expression.arguments), 3)
+
+                self._test_literal_expression(expression.arguments[0], 1)
+                self._test_infix_expression(expression.arguments[1], 2, "*", 3)
+                self._test_infix_expression(expression.arguments[2], 4, "+", 5)
+
+    def test_let_statements(self) -> None:
+        tests = [
+            ("let x = 5;", "x", 5),
+            ("let y = true;", "y", True),
+            ("let foobar = y;", "foobar", "y"),
+        ]
+
+        for tt in tests:
+            program = self._setup_program(tt[0])
+
+            self.assertNotEqual(program, None)
+            self.assertEqual(len(program.statements), 1)
+
+            stmt = program.statements[0]
+
             self.assertIsInstance(stmt, LetStatement)
 
             if isinstance(stmt, LetStatement):
-                self.assertEqual(stmt.name.value, tt)
-                self.assertEqual(stmt.name.token_literal(), tt)
+                self.assertEqual(stmt.name.value, tt[1])
+
+                if stmt.expression is not None:
+                    self._test_literal_expression(stmt.expression, tt[2])
 
     def _test_integer_literal(self, expression: Expression, value: int) -> None:
         self.assertIsInstance(expression, IntegerLiteral)

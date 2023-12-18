@@ -2,8 +2,10 @@ from typing import Optional, Callable
 from interpreter.ast import (
     BlockStatement,
     Boolean,
+    CallExpression,
     Expression,
     ExpressionStatement,
+    FunctionLiteral,
     Identifier,
     IfExpression,
     InfixExpression,
@@ -39,6 +41,7 @@ PRECEDENCES: dict[TokenType, Precedence] = {
     TokenType.MINUS: Precedence.SUM,
     TokenType.SLASH: Precedence.PRODUCT,
     TokenType.ASTERISK: Precedence.PRODUCT,
+    TokenType.LPAREN: Precedence.CALL,
 }
 
 
@@ -57,6 +60,7 @@ class Parser:
             TokenType.FALSE: self._parse_boolean,
             TokenType.LPAREN: self._parse_grouped_expression,
             TokenType.IF: self._parse_if_expression,
+            TokenType.FUNCTION: self._parse_function_literal,
         }
         self._infix_parse_fns: dict[TokenType, Callable] = {
             TokenType.PLUS: self._parse_infix_expression,
@@ -67,6 +71,7 @@ class Parser:
             TokenType.NOT_EQ: self._parse_infix_expression,
             TokenType.LT: self._parse_infix_expression,
             TokenType.GT: self._parse_infix_expression,
+            TokenType.LPAREN: self._parse_call_expression,
         }
 
         self._next_token()
@@ -208,6 +213,81 @@ class Parser:
 
         return IfExpression(token, condition, consequence, alternative)
 
+    def _parse_function_literal(self) -> Optional[Expression]:
+        token = self._current_token
+
+        if not self._expect_peek(TokenType.LPAREN):
+            return None
+
+        parameters = self._parse_function_parameters()
+
+        if not self._expect_peek(TokenType.LBRACE):
+            return None
+
+        body = self._parse_block_statement()
+
+        return FunctionLiteral(token, parameters, body)
+
+    def _parse_function_parameters(self) -> list[Identifier]:
+        identifiers: list[Identifier] = []
+
+        if self._peek_token_is(TokenType.RPAREN):
+            self._next_token()
+
+            return identifiers
+
+        self._next_token()
+
+        identifier = Identifier(self._current_token, self._current_token.literal)
+        identifiers.append(identifier)
+
+        while self._peek_token_is(TokenType.COMMA):
+            self._next_token()
+            self._next_token()
+
+            identifier = Identifier(self._current_token, self._current_token.literal)
+            identifiers.append(identifier)
+
+        if not self._expect_peek(TokenType.RPAREN):
+            return []
+
+        return identifiers
+
+    def _parse_call_expression(self, function: Expression) -> Optional[Expression]:
+        token = self._current_token
+        arguments = self._parse_call_arguments()
+
+        return CallExpression(token, function, arguments)
+
+    def _parse_call_arguments(self) -> list[Expression]:
+        arguments: list[Expression] = []
+
+        if self._peek_token_is(TokenType.RPAREN):
+            self._next_token()
+
+            return arguments
+
+        self._next_token()
+
+        argument = self._parse_expression(Precedence.LOWEST)
+
+        if argument is not None:
+            arguments.append(argument)
+
+        while self._peek_token_is(TokenType.COMMA):
+            self._next_token()
+            self._next_token()
+
+            argument = self._parse_expression(Precedence.LOWEST)
+
+            if argument is not None:
+                arguments.append(argument)
+
+        if not self._expect_peek(TokenType.RPAREN):
+            return []
+
+        return arguments
+
     def _parse_block_statement(self) -> BlockStatement:
         token = self._current_token
         statements: list[Statement] = []
@@ -288,10 +368,14 @@ class Parser:
         if self._expect_peek(TokenType.ASSIGN) is False:
             return None
 
-        while not self._current_token_is(TokenType.SEMICOLON):
+        self._next_token()
+
+        value = self._parse_expression(Precedence.LOWEST)
+
+        if self._peek_token_is(TokenType.SEMICOLON):
             self._next_token()
 
-        statement = LetStatement(token, name, Expression(token))
+        statement = LetStatement(token, name, value)
 
         return statement
 
