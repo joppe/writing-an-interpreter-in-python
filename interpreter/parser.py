@@ -347,13 +347,20 @@ class Parser:
 
         return InfixExpression(token, left, operator, right)
 
-    def _parse_return_statment(self) -> Statement:
+    def _parse_return_statment(self) -> Optional[Statement]:
         token = self._current_token
 
-        while not self._current_token_is(TokenType.SEMICOLON):
-            self._next_token()
+        self._next_token()
 
-        statement = ReturnStatement(token, Expression(token))
+        return_value = self._parse_expression(Precedence.LOWEST)
+
+        if return_value is None:
+            return None
+
+        statement = ReturnStatement(token, return_value)
+
+        if self._peek_token_is(TokenType.SEMICOLON):
+            self._next_token()
 
         return statement
 
