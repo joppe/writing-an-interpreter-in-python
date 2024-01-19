@@ -1,3 +1,4 @@
+from interpreter.eval import Eval
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 
@@ -15,7 +16,6 @@ def repl() -> None:
         if text:
             lexer = Lexer(text)
             parser = Parser(lexer)
-
             program = parser.parse_program()
 
             parser_errors = parser.errors()
@@ -26,4 +26,8 @@ def repl() -> None:
 
                 continue
 
-            print(f"{program}")
+            eval = Eval()
+            evaluated = eval.eval(program)
+
+            if evaluated is not None:
+                print(f"{evaluated.inspect()}")
