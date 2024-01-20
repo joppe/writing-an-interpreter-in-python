@@ -53,6 +53,25 @@ class Eval:
 
             return object.ReturnValue(value)
 
+        if isinstance(node, ast.FunctionLiteral):
+            params = node.parameters
+            body = node.body
+
+            return object.Function(params, body, env)
+
+        if isinstance(node, ast.CallExpression):
+            function = self.eval(node.function, env)
+
+            if self._is_error(function):
+                return function
+
+            args = self._eval_expressions(node.arguments, env)
+
+            if len(args) == 1 and self._is_error(args[0]):
+                return args[0]
+
+            return self._apply_function(function, args)
+
         if isinstance(node, ast.LetStatement):
             value = self.eval(node.expression, env)
 
@@ -71,6 +90,50 @@ class Eval:
             return self._native_bool_to_boolean_object(node.value)
 
         raise NotImplementedError
+
+    def _apply_function(
+        self, fn: object.Object, args: List[object.Object]
+    ) -> object.Object:
+        if isinstance(fn, object.Function):
+            extended_env = self._extend_function_env(fn, args)
+            evaluated = self.eval(fn.body, extended_env)
+
+            return self._unwrap_return_value(evaluated)
+
+        return self._new_error(f"not a function: {fn.type().name}")
+
+    def _unwrap_return_value(self, obj: object.Object) -> object.Object:
+        if isinstance(obj, object.ReturnValue):
+            return obj.value
+
+        return obj
+
+    def _extend_function_env(
+        self,
+        fn: object.Function,
+        args: List[object.Object],
+    ) -> environment.Environment:
+        env = environment.Environment.new_enclosed_environment(fn.env)
+
+        for index, param in enumerate(fn.parameters):
+            env.set(param.value, args[index])
+
+        return env
+
+    def _eval_expressions(
+        self, exps: List[ast.Expression], env: environment.Environment
+    ) -> List[object.Object]:
+        result: List[object.Object] = []
+
+        for exp in exps:
+            evaluated = self.eval(exp, env)
+
+            if self._is_error(evaluated):
+                return [evaluated]
+
+            result.append(evaluated)
+
+        return result
 
     def _eval_identifier(
         self, node: ast.Identifier, env: environment.Environment

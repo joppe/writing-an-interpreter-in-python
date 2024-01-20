@@ -161,6 +161,45 @@ class TestEval(unittest.TestCase):
 
             self._test_integer_object(evaluated, tt[1])
 
+    def test_function_object(self) -> None:
+        input = "fn(x) { x + 2; };"
+
+        evaluated = self._test_eval(input)
+
+        self.assertIsInstance(evaluated, object.Function)
+        self.assertEqual(len(cast(object.Function, evaluated).parameters), 1)
+        self.assertEqual(str(cast(object.Function, evaluated).parameters[0]), "x")
+        self.assertEqual(str(cast(object.Function, evaluated).body), "(x + 2)")
+
+    def test_function_application(self) -> None:
+        tests = [
+            ("let identity = fn(x) { x; }; identity(5);", 5),
+            ("let identity = fn(x) { return x; }; identity(5);", 5),
+            ("let double = fn(x) { x * 2; }; double(5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+            ("fn(x) { x; }(5)", 5),
+        ]
+
+        for tt in tests:
+            evaluated = self._test_eval(tt[0])
+
+            self._test_integer_object(evaluated, tt[1])
+
+    def test_closures(self) -> None:
+        input = """
+        let newAdder = fn(x) {
+            fn(y) { x + y };
+        };
+
+        let addTwo = newAdder(2);
+        addTwo(2);
+        """
+
+        evaluated = self._test_eval(input)
+
+        self._test_integer_object(evaluated, 4)
+
     def _test_null_object(self, obj: object.Object) -> None:
         self.assertEqual(obj, Eval.null)
 

@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from interpreter import ast
+from interpreter import environment
+
 
 class ObjectType(Enum):
     INTEGER = "ILLEGAL"
@@ -8,6 +11,7 @@ class ObjectType(Enum):
     NULL = "NULL"
     RETURN_VALUE = "RETURN_VALUE"
     ERROR = "ERROR"
+    FUNCTION = "FUNCTION"
 
     def __repr__(self) -> str:
         return self._name_
@@ -73,3 +77,21 @@ class Error(Object):
 
     def inspect(self) -> str:
         return f"ERROR: {self.message}"
+
+
+class Function(Object):
+    def __init__(
+        self,
+        parameters: list[ast.Identifier],
+        body: ast.BlockStatement,
+        env: environment.Environment,
+    ) -> None:
+        self.parameters = parameters
+        self.body = body
+        self.env = env
+
+    def type(self) -> ObjectType:
+        return ObjectType.FUNCTION
+
+    def inspect(self) -> str:
+        return f"fn({', '.join([str(p) for p in self.parameters])}) {{\n{self.body}\n}}"
