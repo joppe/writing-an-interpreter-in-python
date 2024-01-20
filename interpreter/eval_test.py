@@ -1,7 +1,7 @@
 import unittest
 
 from typing import cast
-from interpreter.object import Boolean, Object, Integer
+from interpreter import object
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 from interpreter.eval import Eval
@@ -115,10 +115,41 @@ class TestEval(unittest.TestCase):
             evaluated = self._test_eval(tt[0])
             self._test_integer_object(evaluated, tt[1])
 
-    def _test_null_object(self, obj: Object) -> None:
+    def test_error_handling(self) -> None:
+        tests = [
+            ("5 + true;", "type mismatch: INTEGER + BOOLEAN"),
+            ("5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"),
+            ("-true", "unknown operator: -BOOLEAN"),
+            ("true + false;", "unknown operator: BOOLEAN + BOOLEAN"),
+            ("5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN"),
+            (
+                "if (10 > 1) { true + false; }",
+                "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+            (
+                """
+            if (10 > 1) {
+                if (10 > 1) {
+                    return true + false;
+                }
+
+                return 1;
+            }
+            """,
+                "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+        ]
+
+        for tt in tests:
+            evaluated = self._test_eval(tt[0])
+
+            self.assertIsInstance(evaluated, object.Error)
+            self.assertEqual(cast(object.Error, evaluated).message, tt[1])
+
+    def _test_null_object(self, obj: object.Object) -> None:
         self.assertEqual(obj, Eval.null)
 
-    def _test_eval(self, input: str) -> Object:
+    def _test_eval(self, input: str) -> object.Object:
         lexer = Lexer(input)
         parser = Parser(lexer)
         program = parser.parse_program()
@@ -129,10 +160,10 @@ class TestEval(unittest.TestCase):
 
         return evaluated
 
-    def _test_integer_object(self, obj: Object, expected: int) -> None:
-        self.assertIsInstance(obj, Integer)
-        self.assertEqual(cast(Integer, obj).value, expected)
+    def _test_integer_object(self, obj: object.Object, expected: int) -> None:
+        self.assertIsInstance(obj, object.Integer)
+        self.assertEqual(cast(object.Integer, obj).value, expected)
 
-    def _test_boolean_object(self, obj: Object, expected: bool) -> None:
-        self.assertIsInstance(obj, Boolean)
-        self.assertEqual(cast(Boolean, obj).value, expected)
+    def _test_boolean_object(self, obj: object.Object, expected: bool) -> None:
+        self.assertIsInstance(obj, object.Boolean)
+        self.assertEqual(cast(object.Boolean, obj).value, expected)

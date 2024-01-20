@@ -18,11 +18,21 @@ class Eval:
         if isinstance(node, ast.PrefixExpression):
             right = self.eval(node.right)
 
+            if self._is_error(right):
+                return right
+
             return self._eval_prefix_expression(node.operator, right)
 
         if isinstance(node, ast.InfixExpression):
             left = self.eval(node.left)
+
+            if self._is_error(left):
+                return left
+
             right = self.eval(node.right)
+
+            if self._is_error(right):
+                return right
 
             return self._eval_infix_expression(node.operator, left, right)
 
@@ -37,6 +47,9 @@ class Eval:
         if isinstance(node, ast.ReturnStatement):
             value = self.eval(node.return_value)
 
+            if self._is_error(value):
+                return value
+
             return object.ReturnValue(value)
 
         if isinstance(node, ast.IntegerLiteral):
@@ -47,6 +60,15 @@ class Eval:
 
         raise NotImplementedError
 
+    def _new_error(self, message: str) -> object.Error:
+        return object.Error(message)
+
+    def _is_error(self, obj: object.Object) -> bool:
+        if obj is not None:
+            return obj.type() == object.ObjectType.ERROR
+
+        return False
+
     def _eval_program(self, program: ast.Program) -> object.Object:
         result: object.Object = object.Null()
 
@@ -56,17 +78,24 @@ class Eval:
             if isinstance(result, object.ReturnValue):
                 return result.value
 
+            if isinstance(result, object.Error):
+                return result
+
         return result
 
     def _eval_if_expression(self, ie: ast.IfExpression) -> object.Object:
         condition = self.eval(ie.condition)
 
+        if self._is_error(condition):
+            return condition
+
         if self._is_truthy(condition):
             return self.eval(ie.consequence)
-        elif ie.alternative is not None:
+
+        if ie.alternative is not None:
             return self.eval(ie.alternative)
-        else:
-            return Eval.null
+
+        return Eval.null
 
     def _is_truthy(self, obj: object.Object) -> bool:
         match obj:
@@ -87,10 +116,18 @@ class Eval:
 
         if operator == "==":
             return self._native_bool_to_boolean_object(left == right)
-        elif operator == "!=":
+
+        if operator == "!=":
             return self._native_bool_to_boolean_object(left != right)
 
-        return Eval.null
+        if left.type() != right.type():
+            return self._new_error(
+                f"type mismatch: {left.type().name} {operator} {right.type().name}"
+            )
+
+        return self._new_error(
+            f"unknown operator: {left.type().name} {operator} {right.type().name}"
+        )
 
     def _eval_integer_infix_expression(
         self, operator: str, left: object.Integer, right: object.Integer
@@ -116,7 +153,9 @@ class Eval:
             case "!=":
                 return self._native_bool_to_boolean_object(left_value != right_value)
             case _:
-                return Eval.null
+                return self._new_error(
+                    f"unknown operator: {left.type().name} {operator} {right.type().name}"
+                )
 
     def _eval_prefix_expression(
         self, operator: str, right: object.Object
@@ -127,13 +166,15 @@ class Eval:
             case "-":
                 return self._eval_minus_prefix_operator_expression(right)
             case _:
-                return Eval.null
+                return self._new_error(
+                    f"unknown operator: {operator}{right.type().name}"
+                )
 
     def _eval_minus_prefix_operator_expression(
         self, right: object.Object
     ) -> object.Object:
         if not isinstance(right, object.Integer):
-            return Eval.null
+            return self._new_error(f"unknown operator: -{right.type().name}")
 
         value = right.value
 
@@ -158,7 +199,10 @@ class Eval:
         for statement in statements:
             result = self.eval(statement)
 
-            if result is not None and isinstance(result, object.ReturnValue):
+            if result is not None and (
+                isinstance(result, object.ReturnValue)
+                or isinstance(result, object.Error)
+            ):
                 return result
 
         return result
