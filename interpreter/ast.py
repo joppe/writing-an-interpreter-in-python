@@ -74,9 +74,7 @@ class Boolean(Expression):
 
 
 class LetStatement(Statement):
-    def __init__(
-        self, token: Token, name: Identifier, expression: Expression | None
-    ) -> None:
+    def __init__(self, token: Token, name: Identifier, expression: Expression) -> None:
         super().__init__(token)
 
         self.name = name

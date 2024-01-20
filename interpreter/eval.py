@@ -1,6 +1,7 @@
 from typing import List, cast
 from interpreter import ast
 from interpreter import object
+from interpreter import environment
 
 
 class Eval:
@@ -8,15 +9,15 @@ class Eval:
     true = object.Boolean(True)
     false = object.Boolean(False)
 
-    def eval(self, node: ast.Node) -> object.Object:
+    def eval(self, node: ast.Node, env: environment.Environment) -> object.Object:
         if isinstance(node, ast.Program):
-            return self._eval_program(node)
+            return self._eval_program(node, env)
 
         if isinstance(node, ast.ExpressionStatement):
-            return self.eval(node.expression)
+            return self.eval(node.expression, env)
 
         if isinstance(node, ast.PrefixExpression):
-            right = self.eval(node.right)
+            right = self.eval(node.right, env)
 
             if self._is_error(right):
                 return right
@@ -24,12 +25,12 @@ class Eval:
             return self._eval_prefix_expression(node.operator, right)
 
         if isinstance(node, ast.InfixExpression):
-            left = self.eval(node.left)
+            left = self.eval(node.left, env)
 
             if self._is_error(left):
                 return left
 
-            right = self.eval(node.right)
+            right = self.eval(node.right, env)
 
             if self._is_error(right):
                 return right
@@ -38,19 +39,30 @@ class Eval:
 
         if isinstance(node, ast.BlockStatement):
             return self._eval_block_statements(
-                cast(List[ast.BlockStatement], node.statements)
+                cast(List[ast.BlockStatement], node.statements), env
             )
 
         if isinstance(node, ast.IfExpression):
-            return self._eval_if_expression(node)
+            return self._eval_if_expression(node, env)
 
         if isinstance(node, ast.ReturnStatement):
-            value = self.eval(node.return_value)
+            value = self.eval(node.return_value, env)
 
             if self._is_error(value):
                 return value
 
             return object.ReturnValue(value)
+
+        if isinstance(node, ast.LetStatement):
+            value = self.eval(node.expression, env)
+
+            if self._is_error(value):
+                return value
+
+            return env.set(node.name.value, value)
+
+        if isinstance(node, ast.Identifier):
+            return self._eval_identifier(node, env)
 
         if isinstance(node, ast.IntegerLiteral):
             return object.Integer(node.value)
@@ -59,6 +71,16 @@ class Eval:
             return self._native_bool_to_boolean_object(node.value)
 
         raise NotImplementedError
+
+    def _eval_identifier(
+        self, node: ast.Identifier, env: environment.Environment
+    ) -> object.Object:
+        value = env.get(node.value)
+
+        if value is not None:
+            return value
+
+        return self._new_error(f"identifier not found: {node.value}")
 
     def _new_error(self, message: str) -> object.Error:
         return object.Error(message)
@@ -69,11 +91,13 @@ class Eval:
 
         return False
 
-    def _eval_program(self, program: ast.Program) -> object.Object:
+    def _eval_program(
+        self, program: ast.Program, env: environment.Environment
+    ) -> object.Object:
         result: object.Object = object.Null()
 
         for statement in program.statements:
-            result = self.eval(statement)
+            result = self.eval(statement, env)
 
             if isinstance(result, object.ReturnValue):
                 return result.value
@@ -83,17 +107,19 @@ class Eval:
 
         return result
 
-    def _eval_if_expression(self, ie: ast.IfExpression) -> object.Object:
-        condition = self.eval(ie.condition)
+    def _eval_if_expression(
+        self, ie: ast.IfExpression, env: environment.Environment
+    ) -> object.Object:
+        condition = self.eval(ie.condition, env)
 
         if self._is_error(condition):
             return condition
 
         if self._is_truthy(condition):
-            return self.eval(ie.consequence)
+            return self.eval(ie.consequence, env)
 
         if ie.alternative is not None:
-            return self.eval(ie.alternative)
+            return self.eval(ie.alternative, env)
 
         return Eval.null
 
@@ -192,12 +218,12 @@ class Eval:
                 return Eval.false
 
     def _eval_block_statements(
-        self, statements: List[ast.BlockStatement]
+        self, statements: List[ast.BlockStatement], env: environment.Environment
     ) -> object.Object:
         result: object.Object = object.Null()
 
         for statement in statements:
-            result = self.eval(statement)
+            result = self.eval(statement, env)
 
             if result is not None and (
                 isinstance(result, object.ReturnValue)

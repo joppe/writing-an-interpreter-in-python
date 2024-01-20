@@ -1,4 +1,5 @@
 from interpreter.eval import Eval
+from interpreter.environment import Environment
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 
@@ -7,6 +8,8 @@ PROMPT = ">>> "
 
 
 def repl() -> None:
+    env = Environment.new_environment()
+
     while True:
         try:
             text = input(PROMPT)
@@ -27,7 +30,7 @@ def repl() -> None:
                 continue
 
             eval = Eval()
-            evaluated = eval.eval(program)
+            evaluated = eval.eval(program, env)
 
             if evaluated is not None:
                 print(f"{evaluated.inspect()}")

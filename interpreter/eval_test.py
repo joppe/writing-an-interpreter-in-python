@@ -5,6 +5,7 @@ from interpreter import object
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 from interpreter.eval import Eval
+from interpreter.environment import Environment
 
 
 class TestEval(unittest.TestCase):
@@ -138,6 +139,7 @@ class TestEval(unittest.TestCase):
             """,
                 "unknown operator: BOOLEAN + BOOLEAN",
             ),
+            ("foobar", "identifier not found: foobar"),
         ]
 
         for tt in tests:
@@ -146,6 +148,19 @@ class TestEval(unittest.TestCase):
             self.assertIsInstance(evaluated, object.Error)
             self.assertEqual(cast(object.Error, evaluated).message, tt[1])
 
+    def test_let_statements(self) -> None:
+        tests = [
+            ("let a = 5; a;", 5),
+            ("let a = 5 * 5; a;", 25),
+            ("let a = 5; let b = a; b;", 5),
+            ("let a = 5; let b = a; let c = a + b + 5; c;", 15),
+        ]
+
+        for tt in tests:
+            evaluated = self._test_eval(tt[0])
+
+            self._test_integer_object(evaluated, tt[1])
+
     def _test_null_object(self, obj: object.Object) -> None:
         self.assertEqual(obj, Eval.null)
 
@@ -153,9 +168,10 @@ class TestEval(unittest.TestCase):
         lexer = Lexer(input)
         parser = Parser(lexer)
         program = parser.parse_program()
+        env = Environment.new_environment()
         eval = Eval()
 
-        evaluated = eval.eval(program)
+        evaluated = eval.eval(program, env)
         self.assertNotEqual(evaluated, None)
 
         return evaluated
