@@ -2,6 +2,7 @@ from typing import List, cast
 from interpreter import ast
 from interpreter import object
 from interpreter import environment
+from interpreter import builtins
 
 
 class Eval:
@@ -103,6 +104,9 @@ class Eval:
 
             return self._unwrap_return_value(evaluated)
 
+        if isinstance(fn, object.Builtin):
+            return fn.fn(args)
+
         return self._new_error(f"not a function: {fn.type().name}")
 
     def _unwrap_return_value(self, obj: object.Object) -> object.Object:
@@ -145,6 +149,9 @@ class Eval:
 
         if value is not None:
             return value
+
+        if node.value in builtins.builtins:
+            return builtins.builtins[node.value]
 
         return self._new_error(f"identifier not found: {node.value}")
 

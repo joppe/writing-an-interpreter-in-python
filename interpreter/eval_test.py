@@ -217,6 +217,24 @@ class TestEval(unittest.TestCase):
 
         self._test_integer_object(evaluated, 4)
 
+    def test_builtin_functions(self) -> None:
+        tests = [
+            ('len("")', 0),
+            ('len("four")', 4),
+            ('len("hello world")', 11),
+            ("len(1)", "argument to `len` not supported, got ObjectType.INTEGER"),
+            ('len("one", "two")', "wrong number of arguments. got=2, want=1"),
+        ]
+
+        for tt in tests:
+            evaluated = self._test_eval(tt[0])
+
+            if isinstance(tt[1], int):
+                self._test_integer_object(evaluated, tt[1])
+            else:
+                self.assertIsInstance(evaluated, object.Error)
+                self.assertEqual(cast(object.Error, evaluated).message, tt[1])
+
     def _test_null_object(self, obj: object.Object) -> None:
         self.assertEqual(obj, Eval.null)
 

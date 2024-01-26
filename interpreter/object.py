@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Callable
 
 from interpreter import ast
 from interpreter import environment
@@ -107,3 +108,14 @@ class Function(Object):
 
     def inspect(self) -> str:
         return f"fn({', '.join([str(p) for p in self.parameters])}) {{\n{self.body}\n}}"
+
+
+class Builtin(Object):
+    def __init__(self, fn: Callable[[list[Object]], Object]) -> None:
+        self.fn = fn
+
+    def type(self) -> ObjectType:
+        return ObjectType.FUNCTION
+
+    def inspect(self) -> str:
+        return "builtin function"
