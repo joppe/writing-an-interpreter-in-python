@@ -14,6 +14,7 @@ from interpreter.ast import (
     ReturnStatement,
     ExpressionStatement,
     Identifier,
+    StringLiteral,
 )
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
@@ -309,6 +310,25 @@ class TestParser(unittest.TestCase):
 
                 if stmt.expression is not None:
                     self._test_literal_expression(stmt.expression, tt[2])
+
+    def test_string_literal_expression(self) -> None:
+        input = '"hello world";'
+        program = self._setup_program(input)
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 1)
+
+        stmt = program.statements[0]
+
+        self.assertIsInstance(stmt, ExpressionStatement)
+
+        if isinstance(stmt, ExpressionStatement):
+            expression = stmt.expression
+
+            self.assertIsInstance(expression, StringLiteral)
+
+            if isinstance(expression, StringLiteral):
+                self.assertEqual(expression.value, "hello world")
 
     def _test_integer_literal(self, expression: Expression, value: int) -> None:
         self.assertIsInstance(expression, IntegerLiteral)

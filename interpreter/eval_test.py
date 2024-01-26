@@ -9,7 +9,7 @@ from interpreter.environment import Environment
 
 
 class TestEval(unittest.TestCase):
-    def test_eval_integer_expression(self) -> None:
+    def test_integer_expression(self) -> None:
         tests = [
             ("5", 5),
             ("10", 10),
@@ -31,6 +31,22 @@ class TestEval(unittest.TestCase):
         for tt in tests:
             evaluated = self._test_eval(tt[0])
             self._test_integer_object(evaluated, tt[1])
+
+    def test_string_liter(self) -> None:
+        input = '"Hello World!"'
+
+        evaluated = self._test_eval(input)
+
+        self.assertIsInstance(evaluated, object.String)
+        self.assertEqual(cast(object.String, evaluated).value, "Hello World!")
+
+    def test_string_concatenation(self) -> None:
+        input = '"Hello" + " " + "World!"'
+
+        evaluated = self._test_eval(input)
+
+        self.assertIsInstance(evaluated, object.String)
+        self.assertEqual(cast(object.String, evaluated).value, "Hello World!")
 
     def test_boolean_expression(self) -> None:
         tests = [
@@ -140,6 +156,7 @@ class TestEval(unittest.TestCase):
                 "unknown operator: BOOLEAN + BOOLEAN",
             ),
             ("foobar", "identifier not found: foobar"),
+            ('"Hello" - "World"', "unknown operator: STRING - STRING"),
         ]
 
         for tt in tests:

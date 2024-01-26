@@ -12,6 +12,7 @@ class ObjectType(Enum):
     RETURN_VALUE = "RETURN_VALUE"
     ERROR = "ERROR"
     FUNCTION = "FUNCTION"
+    STRING = "STRING"
 
     def __repr__(self) -> str:
         return self._name_
@@ -36,6 +37,17 @@ class Integer(Object):
 
     def inspect(self) -> str:
         return f"{self.value}"
+
+
+class String(Object):
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def type(self) -> ObjectType:
+        return ObjectType.STRING
+
+    def inspect(self) -> str:
+        return self.value
 
 
 class Boolean(Object):

@@ -145,6 +145,16 @@ class IntegerLiteral(Expression):
         return str(self.value)
 
 
+class StringLiteral(Expression):
+    def __init__(self, token: Token, value: str) -> None:
+        super().__init__(token)
+
+        self.value = value
+
+    def __repr__(self) -> str:
+        return self.token.literal
+
+
 class FunctionLiteral(Expression):
     def __init__(
         self, token: Token, parameters: list[Identifier], body: BlockStatement

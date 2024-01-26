@@ -89,6 +89,9 @@ class Eval:
         if isinstance(node, ast.Boolean):
             return self._native_bool_to_boolean_object(node.value)
 
+        if isinstance(node, ast.StringLiteral):
+            return object.String(node.value)
+
         raise NotImplementedError
 
     def _apply_function(
@@ -214,9 +217,22 @@ class Eval:
                 f"type mismatch: {left.type().name} {operator} {right.type().name}"
             )
 
+        if isinstance(left, object.String) and isinstance(right, object.String):
+            return self._eval_string_infix_expression(operator, left, right)
+
         return self._new_error(
             f"unknown operator: {left.type().name} {operator} {right.type().name}"
         )
+
+    def _eval_string_infix_expression(
+        self, operator: str, left: object.String, right: object.String
+    ) -> object.Object:
+        if operator != "+":
+            return self._new_error(
+                f"unknown operator: {left.type().name} {operator} {right.type().name}"
+            )
+
+        return object.String(left.value + right.value)
 
     def _eval_integer_infix_expression(
         self, operator: str, left: object.Integer, right: object.Integer

@@ -26,6 +26,9 @@ class TestLexer(unittest.TestCase):
 
             10 == 10;
             10 != 9;
+
+            "foobar"
+            "foo bar"
         """
         tests = [
             (TokenType.LET, "let"),
@@ -101,6 +104,8 @@ class TestLexer(unittest.TestCase):
             (TokenType.NOT_EQ, "!="),
             (TokenType.INT, "9"),
             (TokenType.SEMICOLON, ";"),
+            (TokenType.STRING, "foobar"),
+            (TokenType.STRING, "foo bar"),
             (TokenType.EOF, ""),
         ]
 

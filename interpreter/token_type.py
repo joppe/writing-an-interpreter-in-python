@@ -8,6 +8,7 @@ class TokenType(Enum):
     # Identifiers + literals
     IDENT = "IDENT"
     INT = "INT"
+    STRING = "STRING"
 
     # Operators
     ASSIGN = "="

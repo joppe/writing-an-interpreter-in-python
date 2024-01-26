@@ -15,6 +15,7 @@ from interpreter.ast import (
     Program,
     ReturnStatement,
     Statement,
+    StringLiteral,
 )
 from interpreter.lexer import Lexer
 from interpreter.token import Token
@@ -61,6 +62,7 @@ class Parser:
             TokenType.LPAREN: self._parse_grouped_expression,
             TokenType.IF: self._parse_if_expression,
             TokenType.FUNCTION: self._parse_function_literal,
+            TokenType.STRING: self._parse_string_literal,
         }
         self._infix_parse_fns: dict[TokenType, Callable] = {
             TokenType.PLUS: self._parse_infix_expression,
@@ -92,6 +94,9 @@ class Parser:
 
     def errors(self) -> list[str]:
         return self._errors
+
+    def _parse_string_literal(self) -> Expression:
+        return StringLiteral(self._current_token, self._current_token.literal)
 
     def _peek_precedence(self) -> Precedence:
         precedence = PRECEDENCES.get(self._peek_token.token_type)

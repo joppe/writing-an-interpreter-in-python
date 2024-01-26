@@ -56,6 +56,8 @@ class Lexer:
                 token = Token(TokenType.LBRACE, self._char)
             case "}":
                 token = Token(TokenType.RBRACE, self._char)
+            case '"':
+                token = Token(TokenType.STRING, self._read_string())
             case "\u0000":
                 token = Token(TokenType.EOF, "")
             case _:
@@ -82,6 +84,17 @@ class Lexer:
             return EMPTY_CHAR
 
         return self._input[self._read_position]
+
+    def _read_string(self) -> str:
+        position = self._position + 1
+
+        while True:
+            self._read_char()
+
+            if self._char == '"' or self._char == EMPTY_CHAR:
+                break
+
+        return self._input[position : self._position]
 
     def _read_identifier(self) -> str:
         position = self._position
