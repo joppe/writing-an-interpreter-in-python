@@ -29,6 +29,8 @@ class TokenType(Enum):
     RPAREN = ")"
     LBRACE = "{"
     RBRACE = "}"
+    LBRACKET = "["
+    RBRACKET = "]"
 
     # Keywords
     FUNCTION = "FUNCTION"

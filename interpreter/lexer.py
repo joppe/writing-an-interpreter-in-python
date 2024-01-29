@@ -58,6 +58,10 @@ class Lexer:
                 token = Token(TokenType.RBRACE, self._char)
             case '"':
                 token = Token(TokenType.STRING, self._read_string())
+            case "[":
+                token = Token(TokenType.LBRACKET, self._char)
+            case "]":
+                token = Token(TokenType.RBRACKET, self._char)
             case "\u0000":
                 token = Token(TokenType.EOF, "")
             case _:

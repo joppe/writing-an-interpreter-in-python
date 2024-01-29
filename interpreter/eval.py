@@ -87,6 +87,27 @@ class Eval:
         if isinstance(node, ast.IntegerLiteral):
             return object.Integer(node.value)
 
+        if isinstance(node, ast.ArrayLiteral):
+            elements = self._eval_expressions(node.elements, env)
+
+            if len(elements) == 1 and self._is_error(elements[0]):
+                return elements[0]
+
+            return object.Array(elements)
+
+        if isinstance(node, ast.IndexExpression):
+            left = self.eval(node.left, env)
+
+            if self._is_error(left):
+                return left
+
+            index = self.eval(node.index, env)
+
+            if self._is_error(index):
+                return index
+
+            return self._eval_index_expression(left, index)
+
         if isinstance(node, ast.Boolean):
             return self._native_bool_to_boolean_object(node.value)
 
@@ -94,6 +115,25 @@ class Eval:
             return object.String(node.value)
 
         raise NotImplementedError
+
+    def _eval_index_expression(
+        self, left: object.Object, index: object.Object
+    ) -> object.Object:
+        if isinstance(left, object.Array) and isinstance(index, object.Integer):
+            return self._eval_array_index_expression(left, index)
+
+        return self._new_error(f"index operator not supported: {left.type().name}")
+
+    def _eval_array_index_expression(
+        self, array: object.Array, index: object.Integer
+    ) -> object.Object:
+        idx = index.value
+        max = len(array.elements) - 1
+
+        if idx < 0 or idx > max:
+            return Eval.null
+
+        return array.elements[idx]
 
     def _apply_function(
         self, fn: object.Object, args: List[object.Object]

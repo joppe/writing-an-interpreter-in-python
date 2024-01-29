@@ -1,11 +1,13 @@
 import unittest
 from typing import Any
 from interpreter.ast import (
+    ArrayLiteral,
     Boolean,
     CallExpression,
     Expression,
     FunctionLiteral,
     IfExpression,
+    IndexExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -166,6 +168,11 @@ class TestParser(unittest.TestCase):
                 "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
             ),
             ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"),
+            ("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+            (
+                "add(a * b[2], b[1], 2 * [1, 2][1])",
+                "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+            ),
         ]
 
         for tt in tests:
@@ -329,6 +336,49 @@ class TestParser(unittest.TestCase):
 
             if isinstance(expression, StringLiteral):
                 self.assertEqual(expression.value, "hello world")
+
+    def test_parsing_array_literals(self) -> None:
+        input = "[1, 2 * 2, 3 + 3]"
+        program = self._setup_program(input)
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 1)
+
+        stmt = program.statements[0]
+
+        self.assertIsInstance(stmt, ExpressionStatement)
+
+        if isinstance(stmt, ExpressionStatement):
+            expression = stmt.expression
+
+            self.assertIsInstance(expression, ArrayLiteral)
+
+            if isinstance(expression, ArrayLiteral):
+                self.assertEqual(len(expression.elements), 3)
+
+                self._test_integer_literal(expression.elements[0], 1)
+                self._test_infix_expression(expression.elements[1], 2, "*", 2)
+                self._test_infix_expression(expression.elements[2], 3, "+", 3)
+
+    def test_parsing_index_expressions(self) -> None:
+        input = "myArray[1 + 1]"
+        program = self._setup_program(input)
+
+        self.assertNotEqual(program, None)
+        self.assertEqual(len(program.statements), 1)
+
+        stmt = program.statements[0]
+
+        self.assertIsInstance(stmt, ExpressionStatement)
+
+        if isinstance(stmt, ExpressionStatement):
+            expression = stmt.expression
+
+            self.assertIsInstance(expression, IndexExpression)
+
+            if isinstance(expression, IndexExpression):
+                self._test_identifier(expression.left, "myArray")
+                self._test_infix_expression(expression.index, 1, "+", 1)
 
     def _test_integer_literal(self, expression: Expression, value: int) -> None:
         self.assertIsInstance(expression, IntegerLiteral)

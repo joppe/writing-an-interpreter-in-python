@@ -252,3 +252,33 @@ class CallExpression(Expression):
         out += ")"
 
         return out
+
+
+class ArrayLiteral(Expression):
+    def __init__(self, token: Token, elements: list[Expression]) -> None:
+        super().__init__(token)
+
+        self.elements = elements
+
+    def __repr__(self) -> str:
+        out = "["
+        elements = []
+
+        for element in self.elements:
+            elements.append(f"{element}")
+
+        out += ", ".join(elements)
+        out += "]"
+
+        return out
+
+
+class IndexExpression(Expression):
+    def __init__(self, token: Token, left: Expression, index: Expression) -> None:
+        super().__init__(token)
+
+        self.left = left
+        self.index = index
+
+    def __repr__(self) -> str:
+        return f"({self.left}[{self.index}])"

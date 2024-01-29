@@ -1,5 +1,6 @@
 from typing import Optional, Callable
 from interpreter.ast import (
+    ArrayLiteral,
     BlockStatement,
     Boolean,
     CallExpression,
@@ -8,6 +9,7 @@ from interpreter.ast import (
     FunctionLiteral,
     Identifier,
     IfExpression,
+    IndexExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -31,6 +33,7 @@ class Precedence(Enum):
     PRODUCT = 5
     PREFIX = 6
     CALL = 7
+    INDEX = 8
 
 
 PRECEDENCES: dict[TokenType, Precedence] = {
@@ -43,6 +46,7 @@ PRECEDENCES: dict[TokenType, Precedence] = {
     TokenType.SLASH: Precedence.PRODUCT,
     TokenType.ASTERISK: Precedence.PRODUCT,
     TokenType.LPAREN: Precedence.CALL,
+    TokenType.LBRACKET: Precedence.INDEX,
 }
 
 
@@ -63,6 +67,7 @@ class Parser:
             TokenType.IF: self._parse_if_expression,
             TokenType.FUNCTION: self._parse_function_literal,
             TokenType.STRING: self._parse_string_literal,
+            TokenType.LBRACKET: self._parse_array_literal,
         }
         self._infix_parse_fns: dict[TokenType, Callable] = {
             TokenType.PLUS: self._parse_infix_expression,
@@ -74,6 +79,7 @@ class Parser:
             TokenType.LT: self._parse_infix_expression,
             TokenType.GT: self._parse_infix_expression,
             TokenType.LPAREN: self._parse_call_expression,
+            TokenType.LBRACKET: self._parse_index_expression,
         }
 
         self._next_token()
@@ -94,6 +100,56 @@ class Parser:
 
     def errors(self) -> list[str]:
         return self._errors
+
+    def _parse_index_expression(self, left: Expression) -> Optional[Expression]:
+        token = self._current_token
+
+        self._next_token()
+
+        index = self._parse_expression(Precedence.LOWEST)
+
+        if index is None:
+            return None
+
+        if not self._expect_peek(TokenType.RBRACKET):
+            return None
+
+        return IndexExpression(token, left, index)
+
+    def _parse_array_literal(self) -> Expression:
+        token = self._current_token
+        elements = self._parse_expression_list(TokenType.RBRACKET)
+
+        return ArrayLiteral(token, elements)
+
+    def _parse_expression_list(self, end: TokenType) -> list[Expression]:
+        expressions: list[Expression] = []
+
+        if self._peek_token_is(end):
+            self._next_token()
+
+            return expressions
+
+        self._next_token()
+
+        expression = self._parse_expression(Precedence.LOWEST)
+
+        if expression is not None:
+            expressions.append(expression)
+
+        while self._peek_token_is(TokenType.COMMA):
+            self._next_token()
+            self._next_token()
+
+            expression = self._parse_expression(Precedence.LOWEST)
+
+            if expression is not None:
+                expressions.append(expression)
+
+        if not self._expect_peek(end):
+            return []
+
+        return expressions
 
     def _parse_string_literal(self) -> Expression:
         return StringLiteral(self._current_token, self._current_token.literal)
@@ -260,38 +316,9 @@ class Parser:
 
     def _parse_call_expression(self, function: Expression) -> Optional[Expression]:
         token = self._current_token
-        arguments = self._parse_call_arguments()
+        arguments = self._parse_expression_list(TokenType.RPAREN)
 
         return CallExpression(token, function, arguments)
-
-    def _parse_call_arguments(self) -> list[Expression]:
-        arguments: list[Expression] = []
-
-        if self._peek_token_is(TokenType.RPAREN):
-            self._next_token()
-
-            return arguments
-
-        self._next_token()
-
-        argument = self._parse_expression(Precedence.LOWEST)
-
-        if argument is not None:
-            arguments.append(argument)
-
-        while self._peek_token_is(TokenType.COMMA):
-            self._next_token()
-            self._next_token()
-
-            argument = self._parse_expression(Precedence.LOWEST)
-
-            if argument is not None:
-                arguments.append(argument)
-
-        if not self._expect_peek(TokenType.RPAREN):
-            return []
-
-        return arguments
 
     def _parse_block_statement(self) -> BlockStatement:
         token = self._current_token

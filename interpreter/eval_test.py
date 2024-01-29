@@ -235,6 +235,40 @@ class TestEval(unittest.TestCase):
                 self.assertIsInstance(evaluated, object.Error)
                 self.assertEqual(cast(object.Error, evaluated).message, tt[1])
 
+    def test_array_literals(self) -> None:
+        input = "[1, 2 * 2, 3 + 3]"
+
+        evaluated = self._test_eval(input)
+
+        self.assertIsInstance(evaluated, object.Array)
+        self.assertEqual(len(cast(object.Array, evaluated).elements), 3)
+
+        self._test_integer_object(cast(object.Array, evaluated).elements[0], 1)
+        self._test_integer_object(cast(object.Array, evaluated).elements[1], 4)
+        self._test_integer_object(cast(object.Array, evaluated).elements[2], 6)
+
+    def test_array_index_expressions(self) -> None:
+        tests = [
+            ("[1, 2, 3][0]", 1),
+            ("[1, 2, 3][1]", 2),
+            ("[1, 2, 3][2]", 3),
+            ("let i = 0; [1][i];", 1),
+            ("[1, 2, 3][1 + 1];", 3),
+            ("let myArray = [1, 2, 3]; myArray[2];", 3),
+            ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6),
+            ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2),
+            ("[1, 2, 3][3]", None),
+            ("[1, 2, 3][-1]", None),
+        ]
+
+        for tt in tests:
+            evaluated = self._test_eval(tt[0])
+
+            if isinstance(tt[1], int):
+                self._test_integer_object(evaluated, tt[1])
+            else:
+                self._test_null_object(evaluated)
+
     def _test_null_object(self, obj: object.Object) -> None:
         self.assertEqual(obj, Eval.null)
 

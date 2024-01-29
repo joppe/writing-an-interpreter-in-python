@@ -14,6 +14,7 @@ class ObjectType(Enum):
     ERROR = "ERROR"
     FUNCTION = "FUNCTION"
     STRING = "STRING"
+    ARRAY = "ARRAY"
 
     def __repr__(self) -> str:
         return self._name_
@@ -108,6 +109,17 @@ class Function(Object):
 
     def inspect(self) -> str:
         return f"fn({', '.join([str(p) for p in self.parameters])}) {{\n{self.body}\n}}"
+
+
+class Array(Object):
+    def __init__(self, elements: list[Object]) -> None:
+        self.elements = elements
+
+    def type(self) -> ObjectType:
+        return ObjectType.ARRAY
+
+    def inspect(self) -> str:
+        return f"[{', '.join([e.inspect() for e in self.elements])}]"
 
 
 class Builtin(Object):
