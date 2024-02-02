@@ -62,6 +62,8 @@ class Lexer:
                 token = Token(TokenType.LBRACKET, self._char)
             case "]":
                 token = Token(TokenType.RBRACKET, self._char)
+            case ":":
+                token = Token(TokenType.COLON, self._char)
             case "\u0000":
                 token = Token(TokenType.EOF, "")
             case _:

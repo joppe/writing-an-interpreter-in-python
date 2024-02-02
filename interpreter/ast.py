@@ -282,3 +282,18 @@ class IndexExpression(Expression):
 
     def __repr__(self) -> str:
         return f"({self.left}[{self.index}])"
+
+
+class HashLiteral(Expression):
+    def __init__(self, token: Token, pairs: dict[Expression, Expression]) -> None:
+        super().__init__(token)
+
+        self.pairs = pairs
+
+    def __repr__(self) -> str:
+        pairs = []
+
+        for key, value in self.pairs.items():
+            pairs.append(f"{key}: {value}")
+
+        return f"{{{', '.join(pairs)}}}"

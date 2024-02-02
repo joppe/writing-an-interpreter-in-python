@@ -30,6 +30,7 @@ class TestLexer(unittest.TestCase):
             "foobar"
             "foo bar"
             [1, 2];
+            { "foo": "bar"}
         """
         tests = [
             (TokenType.LET, "let"),
@@ -113,6 +114,11 @@ class TestLexer(unittest.TestCase):
             (TokenType.INT, "2"),
             (TokenType.RBRACKET, "]"),
             (TokenType.SEMICOLON, ";"),
+            (TokenType.LBRACE, "{"),
+            (TokenType.STRING, "foo"),
+            (TokenType.COLON, ":"),
+            (TokenType.STRING, "bar"),
+            (TokenType.RBRACE, "}"),
             (TokenType.EOF, ""),
         ]
 

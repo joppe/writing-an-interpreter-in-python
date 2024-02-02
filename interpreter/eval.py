@@ -87,6 +87,9 @@ class Eval:
         if isinstance(node, ast.IntegerLiteral):
             return object.Integer(node.value)
 
+        if isinstance(node, ast.HashLiteral):
+            return self._eval_hash_literal(node, env)
+
         if isinstance(node, ast.ArrayLiteral):
             elements = self._eval_expressions(node.elements, env)
 
@@ -116,13 +119,53 @@ class Eval:
 
         raise NotImplementedError
 
+    def _eval_hash_literal(
+        self, node: ast.HashLiteral, env: environment.Environment
+    ) -> object.Object:
+        pairs: dict[object.HashKey, object.HashPair] = {}
+
+        for key_node, value_node in node.pairs.items():
+            key = self.eval(key_node, env)
+
+            if self._is_error(key):
+                return key
+
+            if not isinstance(key, object.Hashable):
+                return self._new_error(f"unusable as hash key: {key.type().name}")
+
+            value = self.eval(value_node, env)
+
+            if self._is_error(value):
+                return value
+
+            hashed = key.hash_key()
+            pairs[hashed] = object.HashPair(key, value)
+
+        return object.Hash(pairs)
+
     def _eval_index_expression(
         self, left: object.Object, index: object.Object
     ) -> object.Object:
         if isinstance(left, object.Array) and isinstance(index, object.Integer):
             return self._eval_array_index_expression(left, index)
 
+        if isinstance(left, object.Hash):
+            return self._eval_hash_index_expression(left, index)
+
         return self._new_error(f"index operator not supported: {left.type().name}")
+
+    def _eval_hash_index_expression(
+        self, hash: object.Hash, index: object.Object
+    ) -> object.Object:
+        if not isinstance(index, object.Hashable):
+            return self._new_error(f"unusable as hash key: {index.type().name}")
+
+        pair = hash.pairs.get(index.hash_key())
+
+        if pair is None:
+            return Eval.null
+
+        return pair.value
 
     def _eval_array_index_expression(
         self, array: object.Array, index: object.Integer

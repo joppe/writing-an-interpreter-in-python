@@ -1,6 +1,6 @@
 import unittest
 
-from typing import cast
+from typing import cast, Dict
 from interpreter import object
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
@@ -157,6 +157,10 @@ class TestEval(unittest.TestCase):
             ),
             ("foobar", "identifier not found: foobar"),
             ('"Hello" - "World"', "unknown operator: STRING - STRING"),
+            (
+                '{"name": "Monkey"}[fn(x) { x }];',
+                "unusable as hash key: FUNCTION",
+            ),
         ]
 
         for tt in tests:
@@ -259,6 +263,57 @@ class TestEval(unittest.TestCase):
             ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2),
             ("[1, 2, 3][3]", None),
             ("[1, 2, 3][-1]", None),
+        ]
+
+        for tt in tests:
+            evaluated = self._test_eval(tt[0])
+
+            if isinstance(tt[1], int):
+                self._test_integer_object(evaluated, tt[1])
+            else:
+                self._test_null_object(evaluated)
+
+    def test_hash_literals(self) -> None:
+        input = """
+        let two = "two";
+        {
+            "one": 10 - 9,
+            two: 1 + 1,
+            "thr" + "ee": 6 / 2,
+            4: 4,
+            true: 5,
+            false: 6
+        }
+        """
+
+        evaluated = self._test_eval(input)
+
+        self.assertIsInstance(evaluated, object.Hash)
+
+        expected: Dict[object.HashKey, int] = {
+            object.String("one").hash_key(): 1,
+            object.String("two").hash_key(): 2,
+            object.String("three").hash_key(): 3,
+            object.Integer(4).hash_key(): 4,
+            object.Boolean(True).hash_key(): 5,
+            object.Boolean(False).hash_key(): 6,
+        }
+
+        self.assertEqual(len(cast(object.Hash, evaluated).pairs), len(expected))
+
+        for expected_key, expected_value in expected.items():
+            pair = cast(object.Hash, evaluated).pairs[expected_key]
+            self._test_integer_object(pair.value, expected_value)
+
+    def test_hash_index_expressions(self) -> None:
+        tests = [
+            ('{"foo": 5}["foo"]', 5),
+            ('{"foo": 5}["bar"]', None),
+            ('let key = "foo"; {"foo": 5}[key]', 5),
+            ('{}["foo"]', None),
+            ("{5: 5}[5]", 5),
+            ("{true: 5}[true]", 5),
+            ("{false: 5}[false]", 5),
         ]
 
         for tt in tests:

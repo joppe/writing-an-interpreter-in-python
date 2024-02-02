@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable
+from typing import Callable, Dict
 
 from interpreter import ast
 from interpreter import environment
@@ -15,9 +15,31 @@ class ObjectType(Enum):
     FUNCTION = "FUNCTION"
     STRING = "STRING"
     ARRAY = "ARRAY"
+    HASH = "HASH"
 
     def __repr__(self) -> str:
         return self._name_
+
+
+class HashKey:
+    def __init__(self, type: ObjectType, value: int) -> None:
+        self.type = type
+        self.value = value
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, HashKey):
+            return False
+
+        return self.type == other.type and self.value == other.value
+
+    def __hash__(self) -> int:
+        return hash((self.type, self.value))
+
+
+class Hashable(ABC):
+    @abstractmethod
+    def hash_key(self) -> HashKey:
+        raise NotImplementedError
 
 
 class Object(ABC):
@@ -30,7 +52,7 @@ class Object(ABC):
         raise NotImplementedError
 
 
-class Integer(Object):
+class Integer(Object, Hashable):
     def __init__(self, value: int) -> None:
         self.value = value
 
@@ -40,8 +62,11 @@ class Integer(Object):
     def inspect(self) -> str:
         return f"{self.value}"
 
+    def hash_key(self) -> HashKey:
+        return HashKey(self.type(), self.value)
 
-class String(Object):
+
+class String(Object, Hashable):
     def __init__(self, value: str) -> None:
         self.value = value
 
@@ -51,8 +76,11 @@ class String(Object):
     def inspect(self) -> str:
         return self.value
 
+    def hash_key(self) -> HashKey:
+        return HashKey(self.type(), hash(self.value))
 
-class Boolean(Object):
+
+class Boolean(Object, Hashable):
     def __init__(self, value: bool) -> None:
         self.value = value
 
@@ -61,6 +89,11 @@ class Boolean(Object):
 
     def inspect(self) -> str:
         return f"{self.value}"
+
+    def hash_key(self) -> HashKey:
+        value = 1 if self.value else 0
+
+        return HashKey(self.type(), value)
 
 
 class Null(Object):
@@ -131,3 +164,23 @@ class Builtin(Object):
 
     def inspect(self) -> str:
         return "builtin function"
+
+
+class HashPair:
+    def __init__(self, key: Object, value: Object) -> None:
+        self.key = key
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"{self.key.inspect()}: {self.value.inspect()}"
+
+
+class Hash(Object):
+    def __init__(self, pairs: Dict[HashKey, HashPair]) -> None:
+        self.pairs = pairs
+
+    def type(self) -> ObjectType:
+        return ObjectType.HASH
+
+    def inspect(self) -> str:
+        return f"{{{', '.join([f'{pair}' for _, pair in self.pairs.items()])}}}"

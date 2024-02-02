@@ -7,6 +7,7 @@ from interpreter.ast import (
     Expression,
     ExpressionStatement,
     FunctionLiteral,
+    HashLiteral,
     Identifier,
     IfExpression,
     IndexExpression,
@@ -68,6 +69,7 @@ class Parser:
             TokenType.FUNCTION: self._parse_function_literal,
             TokenType.STRING: self._parse_string_literal,
             TokenType.LBRACKET: self._parse_array_literal,
+            TokenType.LBRACE: self._parse_hash_literal,
         }
         self._infix_parse_fns: dict[TokenType, Callable] = {
             TokenType.PLUS: self._parse_infix_expression,
@@ -100,6 +102,38 @@ class Parser:
 
     def errors(self) -> list[str]:
         return self._errors
+
+    def _parse_hash_literal(self) -> Optional[Expression]:
+        token = self._current_token
+        pairs: dict[Expression, Expression] = {}
+
+        while not self._peek_token_is(TokenType.RBRACE):
+            self._next_token()
+
+            key = self._parse_expression(Precedence.LOWEST)
+            if key is None:
+                return None
+
+            if not self._expect_peek(TokenType.COLON):
+                return None
+
+            self._next_token()
+
+            value = self._parse_expression(Precedence.LOWEST)
+            if value is None:
+                return None
+
+            pairs[key] = value
+
+            if not self._peek_token_is(TokenType.RBRACE) and not self._expect_peek(
+                TokenType.COMMA
+            ):
+                return None
+
+        if not self._expect_peek(TokenType.RBRACE):
+            return None
+
+        return HashLiteral(token, pairs)
 
     def _parse_index_expression(self, left: Expression) -> Optional[Expression]:
         token = self._current_token
