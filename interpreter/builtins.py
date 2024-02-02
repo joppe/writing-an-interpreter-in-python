@@ -75,9 +75,17 @@ def push_fn(args: List[object.Object]) -> object.Object:
     return object.Array(new_elements)
 
 
+def puts_fn(args: List[object.Object]) -> object.Object:
+    for arg in args:
+        print(arg.inspect())
+
+    return object.Null()
+
+
 builtins: Dict[str, object.Builtin] = {
     "len": object.Builtin(len_fn),
     "first": object.Builtin(first_fn),
     "last": object.Builtin(last_fn),
     "rest": object.Builtin(rest_fn),
+    "puts": object.Builtin(puts_fn),
 }
